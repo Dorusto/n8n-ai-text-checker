@@ -1,0 +1,92 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "sheetId": "your_google_sheet_id",
+        "range": "Sheet1!A:A",
+        "valueInputOption": "RAW"
+      },
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const text = items[0].json.text;\n\nconst spellCheckAgent = new SpellCheckAgent();\nconst result = await spellCheckAgent.checkSpelling(text);\n\nreturn [{ json: { text, spellingErrors: result } }];"
+      },
+      "name": "Spell Check",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const text = items[0].json.text;\n\nconst capitalizationAgent = new CapitalizationAgent();\nconst isCapitalized = capitalizationAgent.isCapitalized(text);\n\nreturn [{ json: { text, isCapitalized } }];"
+      },
+      "name": "Capitalization Check",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sheetId": "your_google_sheet_id",
+        "range": "Sheet1!B:B",
+        "valueInputOption": "RAW",
+        "values": "={{$json[\"text\"]}}"
+      },
+      "name": "Update Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [
+        850,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Spell Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Spell Check": {
+      "main": [
+        [
+          {
+            "node": "Capitalization Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Capitalization Check": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
