@@ -1,7 +1,10 @@
 export interface TextValidationResult {
-    isSpelledCorrectly: boolean;
-    startsWithCapital: boolean;
     originalText: string;
+    isSpelledCorrectly: boolean;
+    spellingErrors: string[];
+    startsWithCapital: boolean;
+    fixedText: string;
+    needsCorrection: boolean;
 }
 
 export interface AgentConfig {

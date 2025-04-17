@@ -1,6 +1,14 @@
 import SpellCheckAgent from '../../ai_agents/spell_check_agent/agent';
 import CapitalizationAgent from '../../ai_agents/capitalization_agent/agent';
-import { TextValidationResult } from '../types';
+
+export interface TextValidationResult {
+  originalText: string;
+  isSpelledCorrectly: boolean;
+  spellingErrors: string[]; // Added this property
+  startsWithCapital: boolean;
+  fixedText: string;
+  needsCorrection: boolean;
+}
 
 class TextValidationService {
   private spellCheckAgent: SpellCheckAgent;
