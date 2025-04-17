@@ -8,4 +8,6 @@ export interface AgentConfig {
     apiKey: string;
     endpointUrl: string;
 }
+
 import 'dotenv/config';
+const apiKey = process.env.OPENAI_API_KEY;

@@ -2,82 +2,63 @@
   "nodes": [
     {
       "parameters": {
+        "operation": "read",
         "sheetId": "your_google_sheet_id",
-        "range": "Sheet1!A:A",
-        "valueInputOption": "RAW"
+        "range": "Sheet1!A:A"
       },
-      "name": "Google Sheets",
+      "name": "Read Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 1,
-      "position": [
-        250,
-        300
-      ]
+      "position": [250, 300]
     },
     {
       "parameters": {
-        "functionCode": "const text = items[0].json.text;\n\nconst spellCheckAgent = new SpellCheckAgent();\nconst result = await spellCheckAgent.checkSpelling(text);\n\nreturn [{ json: { text, spellingErrors: result } }];"
+        "functionCode": "// We need to use axios directly in the function node\nconst axios = require('axios');\n\nconst items = [];\n\nfor (const item of $input.all()) {\n  const text = item.json.A || '';\n  \n  // Check spelling using OpenAI\n  let spellingResult = { isCorrect: true, suggestions: [] };\n  try {\n    const response = await axios.post('https://api.openai.com/v1/chat/completions', {\n      model: \"gpt-3.5-turbo\",\n      messages: [\n        {\n          role: \"system\",\n          content: \"You are a spell-checking assistant. Check the text for spelling errors and return only JSON with format {isCorrect: boolean, suggestions: string[]}\"\n        },\n        {\n          role: \"user\",\n          content: `Check this text for spelling errors: \"${text}\"`\n        }\n      ],\n      temperature: 0.3\n    }, {\n      headers: {\n        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,\n        'Content-Type': 'application/json'\n      }\n    });\n    \n    spellingResult = JSON.parse(response.data.choices[0].message.content);\n  } catch (error) {\n    console.error('Spell check error:', error);\n  }\n  \n  // Check capitalization\n  const isCapitalized = text.length > 0 && text[0] === text[0].toUpperCase();\n  const fixedText = !isCapitalized ? text.charAt(0).toUpperCase() + text.slice(1) : text;\n  \n  items.push({\n    json: {\n      originalText: text,\n      isSpelledCorrectly: spellingResult.isCorrect,\n      spellingErrors: spellingResult.suggestions.join(', '),\n      isCapitalized: isCapitalized,\n      fixedText: fixedText,\n      needsCorrection: !spellingResult.isCorrect || !isCapitalized\n    }\n  });\n}\n\nreturn items;"
       },
-      "name": "Spell Check",
+      "name": "Validate Text",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [
-        450,
-        300
-      ]
+      "position": [450, 300]
     },
     {
       "parameters": {
-        "functionCode": "const text = items[0].json.text;\n\nconst capitalizationAgent = new CapitalizationAgent();\nconst isCapitalized = capitalizationAgent.isCapitalized(text);\n\nreturn [{ json: { text, isCapitalized } }];"
-      },
-      "name": "Capitalization Check",
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [
-        650,
-        300
-      ]
-    },
-    {
-      "parameters": {
+        "operation": "update",
         "sheetId": "your_google_sheet_id",
-        "range": "Sheet1!B:B",
-        "valueInputOption": "RAW",
-        "values": "={{$json[\"text\"]}}"
+        "range": "Sheet1!B:D",
+        "options": {
+          "valueInputMode": "RAW"
+        },
+        "valueInputMode": "RAW",
+        "valueRenderMode": "FORMATTED_VALUE",
+        "usePathForOutput": false,
+        "map": {
+          "mappingMode": "autoMapInputData",
+          "fields": {
+            "B": "={{$json[\"needsCorrection\"]}}",
+            "C": "={{$json[\"spellingErrors\"]}}",
+            "D": "={{$json[\"fixedText\"]}}"
+          }
+        }
       },
       "name": "Update Google Sheets",
       "type": "n8n-nodes-base.googleSheets",
-      "typeVersion": 1,
-      "position": [
-        850,
-        300
-      ]
+      "typeVersion": 4,
+      "position": [650, 300]
     }
   ],
   "connections": {
-    "Google Sheets": {
+    "Read Google Sheets": {
       "main": [
         [
           {
-            "node": "Spell Check",
+            "node": "Validate Text",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Spell Check": {
-      "main": [
-        [
-          {
-            "node": "Capitalization Check",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Capitalization Check": {
+    "Validate Text": {
       "main": [
         [
           {

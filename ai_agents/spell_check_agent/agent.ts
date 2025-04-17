@@ -1,33 +1,44 @@
+import axios from 'axios';
+import { SpellCheckAgentConfig } from './config';
+
 class SpellCheckAgent {
-    private spellCheckService: any; // Replace with actual type for the spell check service
+    private config: typeof SpellCheckAgentConfig;
 
-    constructor(spellCheckService: any) {
-        this.spellCheckService = spellCheckService;
+    constructor(config = SpellCheckAgentConfig) {
+        this.config = config;
     }
 
-    async checkSpelling(text: string): Promise<string[]> {
-        // Call the external spell checking service
-        const response = await this.spellCheckService.check(text);
-        return response.correctedWords; // Adjust based on actual response structure
-    }
-
-    async validateText(text: string): Promise<{ isValid: boolean; errors: string[] }> {
-        const spellingErrors = await this.checkSpelling(text);
-        const capitalLetterError = !this.startsWithCapitalLetter(text);
-
-        const errors = [...spellingErrors];
-        if (capitalLetterError) {
-            errors.push('Text does not start with a capital letter.');
+    async checkSpelling(text: string): Promise<{isCorrect: boolean, suggestions: string[]}> {
+        try {
+            // For a quick solution, use a free spell check API or OpenAI
+            const response = await axios.post(this.config.apiUrl, {
+                model: this.config.model,
+                messages: [
+                    {
+                        role: "system",
+                        content: this.config.systemPrompt
+                    },
+                    {
+                        role: "user",
+                        content: `Check this text for spelling errors: "${text}"`
+                    }
+                ],
+                temperature: this.config.temperature
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${this.config.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: this.config.timeout
+            });
+            
+            // Parse the JSON from the response content
+            const content = response.data.choices[0].message.content;
+            return JSON.parse(content);
+        } catch (error) {
+            console.error('Spell check error:', error);
+            return {isCorrect: false, suggestions: ["Error checking spelling"]};
         }
-
-        return {
-            isValid: errors.length === 0,
-            errors,
-        };
-    }
-
-    private startsWithCapitalLetter(text: string): boolean {
-        return /^[A-Z]/.test(text);
     }
 }
 
